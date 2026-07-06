@@ -1,12 +1,12 @@
 providers = ["php", "node"]
 
 [variables]
-NIXPACKS_PHP_VERSION = "8.3"
+NIXPACKS_PHP_VERSION = "8.4"
 NIXPACKS_NODE_VERSION = "22"
 NPM_CONFIG_PRODUCTION = "false"
 
 [phases.setup]
-nixPkgs = ["php83Extensions.pdo_pgsql"]
+nixPkgs = ["php84Extensions.pdo_pgsql"]
 
 [phases.install]
 cmds = [
