@@ -1,0 +1,257 @@
+// Schéma PostgreSQL — Plateforme DDL CENI RDC
+// Phase 1 — Conception
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  AGENT
+  SECRETARIAT
+  DIRECTION_INFORMATIQUE
+  DEVELOPPEUR
+  ADMIN
+}
+
+enum StatutDemande {
+  BROUILLON
+  SOUMISE
+  RECUE_SECRETARIAT
+  TRANSFEREE_DI
+  EN_ANALYSE
+  VALIDEE
+  REJETEE
+  A_CORRIGER
+  AFFECTEE
+  EN_DEVELOPPEMENT
+  EN_TEST
+  TERMINEE
+  CLOTUREE
+}
+
+enum Priorite {
+  BASSE
+  MOYENNE
+  HAUTE
+  CRITIQUE
+}
+
+enum TypePieceJointe {
+  ANNEXE
+  CAHIER_DES_CHARGES
+  AUTRE
+}
+
+enum TypeNotification {
+  SOUMISSION
+  TRANSFERT
+  VALIDATION
+  REJET
+  CORRECTION_DEMANDEE
+  AFFECTATION
+  CHANGEMENT_STATUT
+  CLOTURE
+  SYSTEME
+}
+
+// ─── Utilisateurs & rôles ────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  nom           String
+  prenom        String
+  telephone     String?
+  service       String?
+  role          Role      @default(AGENT)
+  actif         Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  demandesCreees       Demande[]           @relation("DemandesCreees")
+  affectations         AffectationDev[]
+  commentaires         Commentaire[]
+  historiqueActions    HistoriqueAction[]
+  notifications        Notification[]
+  piecesJointesUploadees PieceJointe[]     @relation("PiecesJointesUploadees")
+
+  @@map("users")
+}
+
+// ─── Numérotation DDL ────────────────────────────────────────────────────────
+
+model NumerotationDdl {
+  annee     Int @id
+  dernierNumero Int @default(0) @map("dernier_numero")
+
+  @@map("numerotation_ddl")
+}
+
+// ─── Demandes ────────────────────────────────────────────────────────────────
+
+model Demande {
+  id        String        @id @default(uuid())
+  numero    String?       @unique // DDL-2026-001 — attribué à la soumission
+  statut    StatutDemande @default(BROUILLON)
+  priorite  Priorite      @default(MOYENNE)
+
+  // Section 1 — Identification
+  titre                   String
+  serviceDemandeur        String  @map("service_demandeur")
+  nomDemandeur            String  @map("nom_demandeur")
+  emailDemandeur          String  @map("email_demandeur")
+  telephoneDemandeur      String? @map("telephone_demandeur")
+  dateSouhaiteeLivraison  DateTime? @map("date_souhaitee_livraison") @db.Date
+
+  // Section 2 — Contexte
+  contexte      String?
+  problematique String?
+
+  // Section 3 — Objectifs
+  objectifGeneral       String? @map("objectif_general")
+  objectifsSpecifiques  Json    @default("[]") @map("objectifs_specifiques") // string[]
+
+  // Section 4 — Périmètre
+  descriptionFonctionnelle String? @map("description_fonctionnelle")
+  utilisateursCibles       String? @map("utilisateurs_cibles")
+  horsPerimetre            String? @map("hors_perimetre")
+
+  // Section 5 — Contraintes
+  contraintesTechniques     String? @map("contraintes_techniques")
+  contraintesReglementaires String? @map("contraintes_reglementaires")
+  dependances               String?
+
+  // Workflow
+  motifRejet    String?   @map("motif_rejet")
+  dateSoumission DateTime? @map("date_soumission")
+
+  auteurId  String @map("auteur_id")
+  auteur    User   @relation("DemandesCreees", fields: [auteurId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  piecesJointes     PieceJointe[]
+  commentaires      Commentaire[]
+  historiqueActions HistoriqueAction[]
+  affectations      AffectationDev[]
+  notifications     Notification[]
+
+  @@index([statut])
+  @@index([auteurId])
+  @@index([dateSoumission])
+  @@map("demandes")
+}
+
+// ─── Pièces jointes ──────────────────────────────────────────────────────────
+
+model PieceJointe {
+  id           String          @id @default(uuid())
+  demandeId    String          @map("demande_id")
+  demande      Demande         @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  nomFichier   String          @map("nom_fichier")
+  nomOriginal  String          @map("nom_original")
+  mimeType     String          @map("mime_type")
+  tailleOctets Int             @map("taille_octets")
+  cheminStockage String        @map("chemin_stockage")
+  type         TypePieceJointe @default(ANNEXE)
+  uploadeParId String?         @map("uploade_par_id")
+  uploadePar   User?           @relation("PiecesJointesUploadees", fields: [uploadeParId], references: [id])
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  @@index([demandeId])
+  @@map("pieces_jointes")
+}
+
+// ─── Commentaires ──────────────────────────────────────────────────────────────
+
+model Commentaire {
+  id        String   @id @default(uuid())
+  demandeId String   @map("demande_id")
+  demande   Demande  @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  auteurId  String   @map("auteur_id")
+  auteur    User     @relation(fields: [auteurId], references: [id])
+  contenu   String
+  interne   Boolean  @default(false) // visible DI/dev uniquement si true
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([demandeId])
+  @@map("commentaires")
+}
+
+// ─── Historique des actions (traçabilité) ────────────────────────────────────
+
+model HistoriqueAction {
+  id            String         @id @default(uuid())
+  demandeId     String         @map("demande_id")
+  demande       Demande        @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  utilisateurId String         @map("utilisateur_id")
+  utilisateur   User           @relation(fields: [utilisateurId], references: [id])
+  ancienStatut  StatutDemande? @map("ancien_statut")
+  nouveauStatut StatutDemande  @map("nouveau_statut")
+  action        String         // ex. SOUMISSION, TRANSFERT_DI, VALIDATION
+  commentaire   String?
+  metadonnees   Json?          // données additionnelles (ids devs, etc.)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  @@index([demandeId])
+  @@index([utilisateurId])
+  @@index([createdAt])
+  @@map("historique_actions")
+}
+
+// ─── Affectation développeurs ────────────────────────────────────────────────
+
+model AffectationDev {
+  id            String   @id @default(uuid())
+  demandeId     String   @map("demande_id")
+  demande       Demande  @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  developpeurId String   @map("developpeur_id")
+  developpeur   User     @relation(fields: [developpeurId], references: [id])
+  affecteParId  String?  @map("affecte_par_id")
+  actif         Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([demandeId, developpeurId])
+  @@index([developpeurId])
+  @@map("affectations_dev")
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  demandeId String?          @map("demande_id")
+  demande   Demande?         @relation(fields: [demandeId], references: [id], onDelete: SetNull)
+  type      TypeNotification
+  titre     String
+  message   String
+  lue       Boolean          @default(false)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, lue])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ─── Paramètres système (admin) ──────────────────────────────────────────────
+
+model Parametre {
+  cle       String   @id
+  valeur    String
+  description String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("parametres")
+}
