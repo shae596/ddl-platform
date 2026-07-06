@@ -1,3 +1,25 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+
+# Variables non sensibles (APP_KEY et APP_URL à définir dans le dashboard Railway)
+[env]
+APP_NAME = "DDL"
+APP_ENV = "production"
+APP_DEBUG = "false"
+DB_CONNECTION = "pgsql"
+SESSION_DRIVER = "database"
+SESSION_LIFETIME = "120"
+SESSION_ENCRYPT = "false"
+CACHE_STORE = "database"
+QUEUE_CONNECTION = "database"
+FILESYSTEM_DISK = "local"
+LOG_CHANNEL = "stderr"
+LOG_LEVEL = "warning"
+APP_LOCALE = "fr"
+APP_FALLBACK_LOCALE = "fr"
+APP_FAKER_LOCALE = "fr_FR"
+MAIL_MAILER = "log"
+MAIL_FROM_ADDRESS = "hello@ceni.cd"
+MAIL_FROM_NAME = "DDL"
+VITE_APP_NAME = "DDL"
