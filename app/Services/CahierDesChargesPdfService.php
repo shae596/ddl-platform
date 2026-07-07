@@ -17,6 +17,32 @@ class CahierDesChargesPdfService
 
         $this->supprimerAncienCahier($demande);
 
+        return $this->creerPdf($demande);
+    }
+
+    /**
+     * Retourne le PDF existant ou le régénère si le fichier a disparu (ex. redéploiement Railway).
+     */
+    public function pieceJointeTelechargeable(Demande $demande): PieceJointe
+    {
+        $demande->load('piecesJointes');
+
+        $cahier = $demande->piecesJointes
+            ->where('type', TypePieceJointe::CahierDesCharges->value)
+            ->sortByDesc('created_at')
+            ->first();
+
+        if ($cahier && Storage::disk('local')->exists($cahier->chemin_stockage)) {
+            return $cahier;
+        }
+
+        $this->supprimerAncienCahier($demande);
+
+        return $this->creerPdf($demande);
+    }
+
+    private function creerPdf(Demande $demande): PieceJointe
+    {
         $logoPath = public_path(config('ddl.logo'));
         $logoBase64 = file_exists($logoPath)
             ? 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath))

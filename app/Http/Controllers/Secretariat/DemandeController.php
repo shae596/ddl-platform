@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Secretariat;
 use App\Enums\StatutDemande;
 use App\Enums\TypePieceJointe;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\DownloadsCahierDesCharges;
 use App\Http\Controllers\Concerns\ShowsDemandeHistorique;
 use App\Models\Demande;
 use App\Models\Notification;
@@ -17,7 +18,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DemandeController extends Controller
 {
-    use ShowsDemandeHistorique;
+    use DownloadsCahierDesCharges, ShowsDemandeHistorique;
 
     public function __construct(
         private readonly DemandeWorkflowService $workflow,
@@ -77,18 +78,7 @@ class DemandeController extends Controller
     {
         $this->autoriserDemande($demande);
 
-        $cahier = $demande->piecesJointes()
-            ->where('type', TypePieceJointe::CahierDesCharges->value)
-            ->latest('created_at')
-            ->firstOrFail();
-
-        abort_unless(Storage::disk('local')->exists($cahier->chemin_stockage), 404);
-
-        return Storage::disk('local')->download(
-            $cahier->chemin_stockage,
-            $cahier->nom_original,
-            ['Content-Type' => 'application/pdf'],
-        );
+        return $this->telechargerCahier($demande);
     }
 
     public function recevoir(Request $request, Demande $demande): RedirectResponse

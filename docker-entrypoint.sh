@@ -47,7 +47,7 @@ if [ "$SESSION_DOMAIN" = "null" ] || [ "$SESSION_DOMAIN" = "" ]; then
     unset SESSION_DOMAIN
 fi
 
-mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs bootstrap/cache
+mkdir -p storage/app/private storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
 php artisan config:clear
