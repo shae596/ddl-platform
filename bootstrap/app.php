@@ -22,4 +22,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        $exceptions->report(function (\Throwable $e): void {
+            if (app()->environment('production')) {
+                error_log(sprintf(
+                    'DDL ERROR: %s in %s:%d',
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine()
+                ));
+            }
+        });
     })->create();

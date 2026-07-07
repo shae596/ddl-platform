@@ -8,6 +8,15 @@ if [ -z "$APP_KEY" ]; then
     exit 1
 fi
 
+# Corrige APP_URL sans https:// (cause fréquente d'erreur 500)
+if [ -n "$APP_URL" ] && ! echo "$APP_URL" | grep -q '^https\?://'; then
+    export APP_URL="https://$APP_URL"
+    echo "==> APP_URL normalisée avec https://"
+fi
+
+export APP_ENV="${APP_ENV:-production}"
+export LOG_CHANNEL=stderr
+
 # Priorité Railway : URL privée > URL publique > DB_URL manuelle
 if [ -n "$DATABASE_PRIVATE_URL" ]; then
     export DB_URL="$DATABASE_PRIVATE_URL"
@@ -16,7 +25,7 @@ elif [ -n "$DATABASE_URL" ] && [ -z "$DB_URL" ]; then
 fi
 
 echo "==> Env check (présence uniquement) :"
-for VAR in DATABASE_PRIVATE_URL DATABASE_URL DB_URL PGHOST PGPORT PGDATABASE PGUSER DB_CONNECTION; do
+for VAR in APP_URL DATABASE_PRIVATE_URL DATABASE_URL DB_URL PGHOST DB_CONNECTION LOG_CHANNEL; do
     if [ -n "$(eval echo \$$VAR)" ]; then
         echo "    $VAR=set"
     else
@@ -26,9 +35,6 @@ done
 
 if [ -z "$DB_URL" ] && [ -z "$DATABASE_URL" ] && [ -z "$DATABASE_PRIVATE_URL" ] && [ -z "$PGHOST" ]; then
     echo "ERROR: Aucune variable base de données sur ce service."
-    echo "       Sur ddl-platform → Variables, ajoutez :"
-    echo "       DB_URL = \${{NomExactPostgres.DATABASE_URL}}"
-    echo "       (remplacez NomExactPostgres par le nom affiché sur le service Postgres)"
     exit 1
 fi
 
@@ -36,11 +42,19 @@ if [ -n "$DB_URL" ] || [ -n "$DATABASE_URL" ] || [ -n "$DATABASE_PRIVATE_URL" ];
     unset DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD
 fi
 
+# Nettoie SESSION_DOMAIN=null (texte) qui casse les cookies
+if [ "$SESSION_DOMAIN" = "null" ] || [ "$SESSION_DOMAIN" = "" ]; then
+    unset SESSION_DOMAIN
+fi
+
+mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+
 php artisan config:clear
 
 echo "==> Diagnostic base de données..."
 php artisan railway:diagnose || {
-    echo "ERROR: impossible de se connecter à PostgreSQL. Vérifiez DB_URL sur le service ddl-platform."
+    echo "ERROR: impossible de se connecter à PostgreSQL."
     exit 1
 }
 
