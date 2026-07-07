@@ -23,6 +23,6 @@ return [
 
     'organization_full' => 'Commission Électorale Nationale Indépendante — RDC',
 
-    'logo' => 'assets/logo-ceni-rdc-placeholder.svg',
+    'logo' => 'assets/logo-ceni-rdc.png',
 
 ];
