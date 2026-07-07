@@ -8,9 +8,26 @@ if [ -z "$APP_KEY" ]; then
     exit 1
 fi
 
-if [ -z "$DB_URL" ] && [ -z "$DATABASE_URL" ]; then
-    echo "ERROR: DB_URL (or DATABASE_URL) is missing. Link PostgreSQL in Railway → Variables → Add Reference."
+# Railway injecte DATABASE_URL quand Postgres est relié au service Web.
+if [ -n "$DATABASE_URL" ] && [ -z "$DB_URL" ]; then
+    export DB_URL="$DATABASE_URL"
+fi
+
+if [ -z "$DB_URL" ] && [ -z "$PGHOST" ]; then
+    echo "ERROR: No database config found."
+    echo "       Link PostgreSQL to this service (Connect) or set DB_URL / DATABASE_URL."
     exit 1
+fi
+
+# Les anciennes variables locales écrasent l'URL Railway si elles restent définies.
+if [ -n "$DB_URL" ] || [ -n "$DATABASE_URL" ]; then
+    unset DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD
+fi
+
+if [ -n "$DB_URL" ]; then
+    echo "==> Database: using DB_URL / DATABASE_URL"
+elif [ -n "$PGHOST" ]; then
+    echo "==> Database: using PGHOST=$PGHOST"
 fi
 
 php artisan config:clear
