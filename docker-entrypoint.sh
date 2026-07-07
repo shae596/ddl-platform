@@ -14,7 +14,7 @@ if [ -n "$APP_URL" ] && ! echo "$APP_URL" | grep -q '^https\?://'; then
     echo "==> APP_URL normalisée avec https://"
 fi
 
-export APP_ENV="${APP_ENV:-production}"
+export APP_ENV=production
 export LOG_CHANNEL=stderr
 
 # Priorité Railway : URL privée > URL publique > DB_URL manuelle

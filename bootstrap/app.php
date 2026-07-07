@@ -14,6 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
 
+        $middleware->redirectUsersTo(function () {
+            $user = auth()->user();
+
+            return $user
+                ? route($user->role->dashboardRoute())
+                : route('login');
+        });
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserRole::class,
         ]);

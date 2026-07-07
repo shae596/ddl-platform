@@ -15,7 +15,13 @@ use App\Http\Controllers\Secretariat\DemandeController as SecretariatDemandeCont
 use App\Http\Controllers\Secretariat\SecretariatDashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('login'));
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route(auth()->user()->role->dashboardRoute());
+    }
+
+    return redirect()->route('login');
+});
 
 Route::get('/ping', fn () => response('pong', 200));
 

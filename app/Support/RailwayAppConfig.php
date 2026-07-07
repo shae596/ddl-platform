@@ -2,8 +2,6 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Facades\URL;
-
 final class RailwayAppConfig
 {
     public static function apply(): void
@@ -24,10 +22,6 @@ final class RailwayAppConfig
         if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
             $url = 'https://'.$url;
             config(['app.url' => $url]);
-        }
-
-        if (app()->environment('production')) {
-            URL::forceScheme('https');
         }
     }
 
