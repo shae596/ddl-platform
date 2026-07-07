@@ -52,7 +52,9 @@ class User extends Authenticatable
         $identifiant = trim($identifiant);
 
         if (filter_var($identifiant, FILTER_VALIDATE_EMAIL)) {
-            return static::query()->where('email', $identifiant)->first();
+            return static::query()
+                ->whereRaw('LOWER(email) = ?', [mb_strtolower($identifiant)])
+                ->first();
         }
 
         $digits = preg_replace('/\D/', '', $identifiant);

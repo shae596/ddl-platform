@@ -61,5 +61,8 @@ php artisan railway:diagnose || {
 echo "==> Running migrations..."
 php artisan migrate --force
 
+echo "==> Seeding users and parameters..."
+php artisan db:seed --force
+
 echo "==> Starting server on port ${PORT:-8000}..."
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-8000}"

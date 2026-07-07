@@ -22,14 +22,13 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($users as $data) {
-            User::updateOrCreate(
-                ['email' => $data['email']],
-                [
-                    ...$data,
-                    'password' => 'Password123!',
-                    'actif' => true,
-                ]
-            );
+            $user = User::query()->firstOrNew(['email' => $data['email']]);
+            $user->fill([
+                ...$data,
+                'actif' => true,
+            ]);
+            $user->password = 'Password123!';
+            $user->save();
         }
 
         User::query()->where('email', 'admin@ceni.cd')->update(['actif' => false]);
